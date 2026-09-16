@@ -243,7 +243,7 @@ docker run --rm -p 8501:8501 camera-rank
 ### Локальный запуск без Docker (для разработки)
 
 ```
-git clone <repo-url>
+git clone git@github.com:MatveyMahlyshev/cam-quality-checker.git
 cd cam-quality-checker
 uv sync
 uv run streamlit run main.py
