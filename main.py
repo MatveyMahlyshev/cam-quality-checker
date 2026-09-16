@@ -4,9 +4,9 @@ import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
 
-from metrics import compute_all
-from validation import validate_image
-from rating import build_rating, pairwise_diff, CRITERIA, DEFAULT_WEIGHTS, REFERENCE
+from metrics.metrics import compute_all
+from validation.validation import validate_image
+from rating.rating import build_rating, pairwise_diff, CRITERIA, DEFAULT_WEIGHTS, REFERENCE
 
 st.set_page_config(page_title="QualityChecker", page_icon="", layout="wide")
 st.title("Рейтинг камер по качеству фото")
