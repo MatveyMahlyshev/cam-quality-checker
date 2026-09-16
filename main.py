@@ -4,12 +4,15 @@ import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
 
-from metrics.metrics import compute_all
-from validation.validation import validate_image
-from rating.rating import build_rating, pairwise_diff, CRITERIA, DEFAULT_WEIGHTS, REFERENCE
+from metrics import compute_all
+from validators import DefaultImageValidator
+from rating import build_rating, pairwise_diff, CRITERIA, DEFAULT_WEIGHTS, REFERENCE
+
 
 st.set_page_config(page_title="QualityChecker", page_icon="", layout="wide")
 st.title("Рейтинг камер по качеству фото")
+
+validator = DefaultImageValidator()
 
 with st.sidebar:
     st.header("Настройки")
@@ -55,9 +58,9 @@ if uploaded:
             st.error(f"{file.name}: не удалось прочитать")
             continue
 
-        ok, msg, warnings = validate_image(img, file.name)
-        if not ok:
-            st.error(f"**{file.name}** — отклонено\n\n{msg}")
+        result = validator.validate(img, file.name)
+        if not result:
+            st.error(f"**{file.name}** — отклонено\n\n{result.message}")
             continue
 
         m = compute_all(img)
@@ -87,7 +90,7 @@ if uploaded:
                     f"Анализировалось в {m['analyzed_size'][0]}×{m['analyzed_size'][1]}"
                 )
 
-        for wmsg in warnings:
+        for wmsg in result.warnings:
             st.warning(f"{wmsg}")
 
         camera = st.text_input(
