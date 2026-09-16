@@ -135,14 +135,31 @@ if uploaded:
         rated = build_rating(rows, weights=weights, method=method, use_reference=use_ref)
 
         st.subheader("Итоговый рейтинг")
+
         df = pd.DataFrame(rated)
+
+        DISPLAY_LABELS = {
+            "rank":          "Место",
+            "camera":        "Камера",
+            "score":         "Балл",
+            "sharpness":     "Резкость",
+            "noise":         "Яркостный шум",
+            "dynamic_range": "Динамический диапазон",
+            "exposure":      "Экспозиция",
+            "contrast":      "Контраст",
+            "colorfulness":  "Насыщенность",
+            "chroma_noise":  "Цветовой шум",
+            "highlight_rec": "Сохранность светов",
+            "shadow_detail": "Сохранность теней",
+        }
+
         show_cols = ["rank", "camera", "score"] + list(CRITERIA.keys())
-        st.dataframe(df[show_cols], use_container_width=True, hide_index=True)
+        df_show = df[show_cols].rename(columns=DISPLAY_LABELS)
+
+        st.dataframe(df_show, use_container_width=True, hide_index=True)
 
         df_plot = df.reset_index(drop=True).copy()
-
         df_plot["score_num"] = pd.to_numeric(df_plot["score"], errors="coerce")
-
 
         fig = go.Figure(go.Bar(
             x=df_plot["camera"].astype(str).tolist(),
@@ -190,8 +207,27 @@ if uploaded:
 
         if len(rated) >= 2:
             st.subheader("Попарное сравнение")
+
             diffs = pairwise_diff(rated)
-            st.dataframe(pd.DataFrame(diffs), use_container_width=True, hide_index=True)
+            df_diffs = pd.DataFrame(diffs)
+
+            DIFF_LABELS = {
+                "A":                "Камера A",
+                "B":                "Камера B",
+                "Δ score":          "Δ Балл",
+                "Δ sharpness":      "Δ Резкость",
+                "Δ noise":          "Δ Яркостный шум",
+                "Δ dynamic_range":  "Δ Динамический диапазон",
+                "Δ exposure":       "Δ Экспозиция",
+                "Δ contrast":       "Δ Контраст",
+                "Δ colorfulness":   "Δ Насыщенность",
+                "Δ chroma_noise":   "Δ Цветовой шум",
+                "Δ highlight_rec":  "Δ Сохранность светов",
+                "Δ shadow_detail":  "Δ Сохранность теней",
+            }
+
+            df_diffs = df_diffs.rename(columns=DIFF_LABELS)
+            st.dataframe(df_diffs, use_container_width=True, hide_index=True)
             st.caption("Δ > 0 — первая камера лучше по показателю.")
 
         st.subheader("Экспорт")
