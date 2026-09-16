@@ -1,4 +1,4 @@
-from .utils import to_gray, normalize_size
+from .utils import to_gray, normalize_size, noise_estimate
 from .base import BaseMetric
 from .basic import (
     SharpnessMetric,
@@ -16,6 +16,7 @@ from .pipeline import MetricsPipeline, compute_all
 __all__ = [
     "to_gray",
     "normalize_size",
+    "noise_estimate",
     "BaseMetric",
     "SharpnessMetric",
     "NoiseMetric",
