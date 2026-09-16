@@ -47,6 +47,19 @@ uploaded = st.file_uploader(
     accept_multiple_files=True,
 )
 
+
+def dedupe_names(rows):
+    seen = {}
+    for r in rows:
+        name = r["camera"]
+        if name in seen:
+            seen[name] += 1
+            r["camera"] = f"{name} ({seen[name]})"
+        else:
+            seen[name] = 1
+    return rows
+
+
 if uploaded:
     rows = []
     st.subheader("Результаты по каждому фото")
@@ -101,6 +114,8 @@ if uploaded:
         rows.append({"camera": camera, **m})
 
     if rows:
+        rows = dedupe_names(rows)
+
         if len(rows) < 2:
             st.info("Для рейтинга нужно минимум 2 камеры. Пока балл условный.")
 
@@ -111,9 +126,16 @@ if uploaded:
         show_cols = ["rank", "camera", "score"] + list(CRITERIA.keys())
         st.dataframe(df[show_cols], use_container_width=True, hide_index=True)
 
+        df_plot = df.reset_index(drop=True).copy()
+
+        df_plot["score_num"] = pd.to_numeric(df_plot["score"], errors="coerce")
+
+
         fig = go.Figure(go.Bar(
-            x=df["camera"], y=df["score"],
-            text=df["score"], textposition="outside",
+            x=df_plot["camera"].astype(str).tolist(),
+            y=df_plot["score_num"].tolist(),
+            text=[f"{s:.2f}" if pd.notna(s) else "nan" for s in df_plot["score_num"]],
+            textposition="outside",
             marker_color="#4C78A8",
         ))
         fig.update_layout(height=350, yaxis_title="Балл", xaxis_title="")
@@ -121,25 +143,37 @@ if uploaded:
 
         st.subheader("Профиль по показателям")
         keys = list(CRITERIA.keys())
+
+        ranges = {k: (df[k].min(), df[k].max()) for k in keys}
         fig_radar = go.Figure()
         for _, row in df.iterrows():
             vals = []
             for k in keys:
+                lo, hi = ranges[k]
+                if hi - lo < 1e-9:
+                    vals.append(0.5)
+                    continue
                 v = row[k]
-                ref = REFERENCE[k]
-                ratio = (v / ref) if CRITERIA[k] else (ref / max(v, 1e-6))
-                vals.append(min(ratio, 1.5))
+                norm = (v - lo) / (hi - lo)
+                if not CRITERIA[k]:
+                    norm = 1 - norm
+                vals.append(float(norm))
             fig_radar.add_trace(go.Scatterpolar(
                 r=vals + [vals[0]],
                 theta=keys + [keys[0]],
-                name=row["camera"],
-                fill="toself", opacity=0.5,
+                name=str(row["camera"]),
+                fill="toself",
+                opacity=0.5,
             ))
         fig_radar.update_layout(
-            polar=dict(radialaxis=dict(visible=True, range=[0, 1.5])),
+            polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
             height=500,
         )
         st.plotly_chart(fig_radar, use_container_width=True)
+        st.caption(
+            "1.0 — лучший результат по показателю внутри выборки, "
+            "0.0 — худший. Оси нормированы по min–max."
+        )
 
         if len(rated) >= 2:
             st.subheader("Попарное сравнение")
