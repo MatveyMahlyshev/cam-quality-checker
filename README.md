@@ -255,32 +255,37 @@ uv run streamlit run main.py
 
 ```
 cam-quality-checker/
-├── main.py                     # Streamlit-приложение
 ├── metrics/
 │   ├── __init__.py
-│   ├── base.py                 # BaseMetric (ABC)
-│   ├── basic.py                # девять метрик
-│   ├── utils.py                # to_gray, normalize_size
-│   └── pipeline.py             # MetricsPipeline, compute_all
+│   ├── base.py
+│   ├── basic.py
+│   ├── pipeline.py
+│   └── utils.py
 ├── rating/
 │   ├── __init__.py
-│   ├── base.py                 # BaseRatingStrategy (ABC)
-│   ├── criteria.py             # CRITERIA, DEFAULT_WEIGHTS, REFERENCE
-│   ├── weighted.py             # WeightedSumStrategy
-│   └── topsis.py               # TopsisStrategy
-├── validators/
-│   ├── __init__.py
-│   ├── base.py                 # BaseValidator (ABC), ValidationResult
-│   └── image_validator.py      # DefaultImageValidator
+│   ├── base.py
+│   ├── criteria.py
+│   ├── topsis.py
+│   └── weighted.py
 ├── tests/
+│   ├── __init__.py
+│   ├── conftest.py
 │   ├── test_metrics.py
+│   ├── test_pipeline.py
 │   ├── test_rating.py
 │   └── test_validators.py
-├── pyproject.toml
-├── uv.lock
-├── Dockerfile
+├── validators/
+│   ├── __init__.py
+│   ├── base.py
+│   └── image_validator.py
+├── .dockerignore
+├── .python-version
 ├── docker-compose.yml
-└── README.md
+├── Dockerfile
+├── main.py
+├── pyproject.toml
+├── README.md
+└── uv.lock
 ```
 
 ---
