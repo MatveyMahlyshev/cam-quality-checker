@@ -6,12 +6,11 @@ import plotly.graph_objects as go
 
 from metrics import compute_all
 from validators import DefaultImageValidator
-from rating import build_rating, pairwise_diff, CRITERIA, DEFAULT_WEIGHTS, REFERENCE
+from rating import build_rating, pairwise_diff, CRITERIA, DEFAULT_WEIGHTS
 
 
-st.set_page_config(page_title="QualityChecker", page_icon="", layout="wide")
+st.set_page_config(page_title="QualityChecker", page_icon="📷", layout="wide")
 st.title("Рейтинг камер по качеству фото")
-
 
 validator = DefaultImageValidator()
 
@@ -54,24 +53,50 @@ METRIC_HELP = {
     "shadow_detail": "Сохранность текстуры в тенях. Чем выше — тем лучше проработаны тёмные участки.",
 }
 
+METHOD_HELP = {
+    "weighted": (
+        "Взвешенная сумма. Каждый показатель нормируется в 0–100 и складывается с весом. "
+        "Прозрачно, видно вклад каждой метрики. Балл зависит от весов."
+    ),
+    "topsis": (
+        "TOPSIS. Строится идеальная и антиидеальная камера, считается расстояние до них. "
+        "Балл — близость к идеалу. Даёт крайние значения, когда одна камера доминирует."
+    ),
+}
+
+SCALE_HELP = (
+    "Выключено — относительная шкала: min–max по выборке. Лучшая камера 100, худшая 0. "
+    "Балл зависит от состава выборки.\n\n"
+    "Включено — абсолютная шкала: сравнение с эталоном. 100 = уровень эталона, "
+    "балл не зависит от того, кто ещё загружен."
+)
+
 
 with st.sidebar:
     st.header("Настройки")
+
     method = st.radio(
         "Метод агрегации",
         ["weighted", "topsis"],
         format_func=lambda x: "Взвешенная сумма" if x == "weighted" else "TOPSIS",
+        help=METHOD_HELP["weighted"] + "\n\n— — —\n\n" + METHOD_HELP["topsis"],
     )
+
     use_ref = st.checkbox(
         "Абсолютная шкала (относительно эталона)",
         value=False,
-        help="Если выключено — нормировка min–max по выборке. "
-             "Если включено — балл не зависит от того, кто ещё загружен.",
+        help=SCALE_HELP,
     )
+
     st.caption("Веса показателей")
     weights = {}
     for k, v in DEFAULT_WEIGHTS.items():
-        weights[k] = st.slider(WEIGHT_LABELS.get(k, k), 0.0, 0.5, v, 0.01)
+        weights[k] = st.slider(
+            WEIGHT_LABELS.get(k, k),
+            0.0, 0.5, v, 0.01,
+            help=METRIC_HELP[k],
+        )
+
 
 with st.expander("Как пользоваться", expanded=False):
     st.markdown("""
@@ -81,10 +106,7 @@ with st.expander("Как пользоваться", expanded=False):
     - Нужны и текстуры, и ровные участки.
     - Минимум 480 px по короткой стороне.
     """)
-    
-with st.expander("Что означают показатели", expanded=False):
-    for k, label in WEIGHT_LABELS.items():
-        st.markdown(f"- **{label}** — {METRIC_HELP[k]}")
+
 
 uploaded = st.file_uploader(
     "Загрузите фото (можно несколько)",
@@ -172,13 +194,15 @@ if uploaded:
         show_cols = ["rank", "camera", "score"] + list(CRITERIA.keys())
         df_show = df[show_cols].rename(columns=DISPLAY_LABELS)
 
-        st.dataframe(df_show, use_container_width=True, hide_index=True)
-
-        st.markdown("**Как читать таблицу:**")
-        st.markdown(
-            "- **Место** — позиция камеры в рейтинге (1 — лучшая).\n"
-            "- **Балл** — итоговая оценка после агрегации (0–100 или выше при абсолютной шкале).\n"
-            + "\n".join(f"- **{label}** — {METRIC_HELP[k]}" for k, label in WEIGHT_LABELS.items())
+        st.dataframe(
+            df_show,
+            use_container_width=True,
+            hide_index=True,
+            help=(
+                "Место — позиция камеры в рейтинге (1 — лучшая). "
+                "Балл — итоговая оценка после агрегации. "
+                "Остальные столбцы — значения метрик в исходных единицах."
+            ),
         )
 
         df_plot = df.reset_index(drop=True).copy()
@@ -193,7 +217,12 @@ if uploaded:
         ))
         fig.update_layout(height=350, yaxis_title="Балл", xaxis_title="")
         st.plotly_chart(fig, use_container_width=True)
-        st.caption("Столбцы — итоговые баллы камер. Чем выше столбец, тем лучше результат.")
+
+        st.caption(
+            "Столбцы — итоговые баллы камер. Чем выше, тем лучше результат."
+            if method == "weighted"
+            else "TOPSIS: 100 — близко к идеалу по всем показателям, 0 — антиидеал."
+        )
 
         st.subheader("Профиль по показателям")
         keys = list(CRITERIA.keys())
@@ -214,7 +243,7 @@ if uploaded:
                 vals.append(float(norm))
             fig_radar.add_trace(go.Scatterpolar(
                 r=vals + [vals[0]],
-                theta=keys + [keys[0]],
+                theta=[WEIGHT_LABELS[k] for k in keys] + [WEIGHT_LABELS[keys[0]]],
                 name=str(row["camera"]),
                 fill="toself",
                 opacity=0.5,
@@ -225,11 +254,9 @@ if uploaded:
         )
         st.plotly_chart(fig_radar, use_container_width=True)
 
-        st.markdown("**Как читать радар:**")
-        st.markdown(
-            "- По кругу расположены показатели качества.\n"
-            "- **1.0** — лучший результат по показателю внутри выборки, **0.0** — худший.\n"
-            "- Оси нормированы по min–max, поэтому форма профиля показывает сильные и слабые стороны каждой камеры."
+        st.caption(
+            "1.0 — лучший результат по показателю внутри выборки, 0.0 — худший. "
+            "Оси нормированы по min–max, форма профиля показывает сильные и слабые стороны камер."
         )
 
         if len(rated) >= 2:
@@ -254,13 +281,15 @@ if uploaded:
             }
 
             df_diffs = df_diffs.rename(columns=DIFF_LABELS)
-            st.dataframe(df_diffs, use_container_width=True, hide_index=True)
 
-            st.markdown("**Как читать таблицу:**")
-            st.markdown(
-                "- Каждая строка — сравнение двух камер (A и B).\n"
-                "- **Δ** — разница значений: положительное значение означает, что **камера A лучше** по этому показателю.\n"
-                "- Отрицательное Δ — лучше камера B."
+            st.dataframe(
+                df_diffs,
+                use_container_width=True,
+                hide_index=True,
+                help=(
+                    "Каждая строка — сравнение двух камер (A и B). "
+                    "Δ > 0 — камера A лучше по показателю, Δ < 0 — лучше камера B."
+                ),
             )
 
         st.subheader("Экспорт")
