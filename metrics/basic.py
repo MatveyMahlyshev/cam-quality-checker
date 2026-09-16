@@ -135,8 +135,12 @@ class HighlightRecoveryMetric(BaseMetric):
             return 0.5
 
         lap = cv2.Laplacian(gray, cv2.CV_32F)
+        baseline = float(lap.std())
+
+        if baseline < 1e-3:
+            return 0.5
+
         texture = float(lap[bright].std())
-        baseline = float(lap.std()) + 1e-6
         ratio = texture / baseline
         return float(np.clip(ratio, 0.0, 1.5) / 1.5)
 
@@ -153,7 +157,11 @@ class ShadowDetailMetric(BaseMetric):
             return 0.5
 
         lap = cv2.Laplacian(gray, cv2.CV_32F)
+        baseline = float(lap.std())
+
+        if baseline < 1e-3:
+            return 0.5
+
         texture = float(lap[dark].std())
-        baseline = float(lap.std()) + 1e-6
         ratio = texture / baseline
         return float(np.clip(ratio, 0.0, 1.5) / 1.5)
