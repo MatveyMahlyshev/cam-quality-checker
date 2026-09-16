@@ -23,13 +23,13 @@ DEFAULT_WEIGHTS = {
 }
 
 REFERENCE = {
-    "sharpness": 8.0,
-    "noise": 2.0,
-    "dynamic_range": 6.5,
-    "exposure": 0.90,
+    "sharpness": 3.0,
+    "noise": 1.0,
+    "dynamic_range": 7.5,
+    "exposure": 0.85,
     "contrast": 0.20,
-    "colorfulness": 40.0,
-    "chroma_noise": 6.0,
-    "highlight_rec": 0.60,
+    "colorfulness": 60.0,
+    "chroma_noise": 0.5,
+    "highlight_rec": 0.70,
     "shadow_detail": 0.50,
 }
