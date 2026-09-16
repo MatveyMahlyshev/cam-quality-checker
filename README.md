@@ -211,3 +211,7 @@ TOPSIS не требует выбора единиц измерения, но д
 ---
 
 ## Установка и запуск
+
+1. Установить Docker Desktop или версию для Linux/Mac. Инструкция: https://www.docker.com/products/docker-sandboxes/#get-started
+2. Перейти в директорию приложения: cd /path/cam-quality-checker
+3. Выполнить команду: docker-compose up --build
