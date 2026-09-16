@@ -12,7 +12,48 @@ from rating import build_rating, pairwise_diff, CRITERIA, DEFAULT_WEIGHTS, REFER
 st.set_page_config(page_title="QualityChecker", page_icon="", layout="wide")
 st.title("Рейтинг камер по качеству фото")
 
+
 validator = DefaultImageValidator()
+
+WEIGHT_LABELS = {
+    "sharpness":     "Резкость",
+    "noise":         "Яркостный шум",
+    "dynamic_range": "Динамический диапазон",
+    "exposure":      "Экспозиция",
+    "contrast":      "Контраст",
+    "colorfulness":  "Насыщенность",
+    "chroma_noise":  "Цветовой шум",
+    "highlight_rec": "Сохранность светов",
+    "shadow_detail": "Сохранность теней",
+}
+
+DISPLAY_LABELS = {
+    "rank":          "Место",
+    "camera":        "Камера",
+    "score":         "Балл",
+    "sharpness":     "Резкость",
+    "noise":         "Яркостный шум",
+    "dynamic_range": "Динамический диапазон",
+    "exposure":      "Экспозиция",
+    "contrast":      "Контраст",
+    "colorfulness":  "Насыщенность",
+    "chroma_noise":  "Цветовой шум",
+    "highlight_rec": "Сохранность светов",
+    "shadow_detail": "Сохранность теней",
+}
+
+METRIC_HELP = {
+    "sharpness":     "Детализация изображения. Чем выше — тем резче фото.",
+    "noise":         "Яркостный шум в однородных зонах. Чем ниже — тем чище кадр.",
+    "dynamic_range": "Сколько ступеней яркости передаёт камера. Чем выше — тем шире диапазон.",
+    "exposure":      "Насколько средняя яркость близка к середине. Чем выше — тем точнее экспозиция.",
+    "contrast":      "Разброс яркости. Чем выше — тем контрастнее кадр.",
+    "colorfulness":  "Насыщенность цвета. Чем выше — тем «сочнее» фото.",
+    "chroma_noise":  "Цветовой шум в однородных зонах. Чем ниже — тем чище цвет.",
+    "highlight_rec": "Сохранность текстуры в светах. Чем выше — тем лучше камера держит яркие участки.",
+    "shadow_detail": "Сохранность текстуры в тенях. Чем выше — тем лучше проработаны тёмные участки.",
+}
+
 
 with st.sidebar:
     st.header("Настройки")
@@ -28,19 +69,6 @@ with st.sidebar:
              "Если включено — балл не зависит от того, кто ещё загружен.",
     )
     st.caption("Веса показателей")
-
-    WEIGHT_LABELS = {
-        "sharpness":     "Резкость",
-        "noise":         "Яркостный шум",
-        "dynamic_range": "Динамический диапазон",
-        "exposure":      "Экспозиция",
-        "contrast":      "Контраст",
-        "colorfulness":  "Насыщенность",
-        "chroma_noise":  "Цветовой шум",
-        "highlight_rec": "Сохранность светов",
-        "shadow_detail": "Сохранность теней",
-    }
-
     weights = {}
     for k, v in DEFAULT_WEIGHTS.items():
         weights[k] = st.slider(WEIGHT_LABELS.get(k, k), 0.0, 0.5, v, 0.01)
@@ -53,6 +81,10 @@ with st.expander("Как пользоваться", expanded=False):
     - Нужны и текстуры, и ровные участки.
     - Минимум 480 px по короткой стороне.
     """)
+    
+with st.expander("Что означают показатели", expanded=False):
+    for k, label in WEIGHT_LABELS.items():
+        st.markdown(f"- **{label}** — {METRIC_HELP[k]}")
 
 uploaded = st.file_uploader(
     "Загрузите фото (можно несколько)",
@@ -137,26 +169,17 @@ if uploaded:
         st.subheader("Итоговый рейтинг")
 
         df = pd.DataFrame(rated)
-
-        DISPLAY_LABELS = {
-            "rank":          "Место",
-            "camera":        "Камера",
-            "score":         "Балл",
-            "sharpness":     "Резкость",
-            "noise":         "Яркостный шум",
-            "dynamic_range": "Динамический диапазон",
-            "exposure":      "Экспозиция",
-            "contrast":      "Контраст",
-            "colorfulness":  "Насыщенность",
-            "chroma_noise":  "Цветовой шум",
-            "highlight_rec": "Сохранность светов",
-            "shadow_detail": "Сохранность теней",
-        }
-
         show_cols = ["rank", "camera", "score"] + list(CRITERIA.keys())
         df_show = df[show_cols].rename(columns=DISPLAY_LABELS)
 
         st.dataframe(df_show, use_container_width=True, hide_index=True)
+
+        st.markdown("**Как читать таблицу:**")
+        st.markdown(
+            "- **Место** — позиция камеры в рейтинге (1 — лучшая).\n"
+            "- **Балл** — итоговая оценка после агрегации (0–100 или выше при абсолютной шкале).\n"
+            + "\n".join(f"- **{label}** — {METRIC_HELP[k]}" for k, label in WEIGHT_LABELS.items())
+        )
 
         df_plot = df.reset_index(drop=True).copy()
         df_plot["score_num"] = pd.to_numeric(df_plot["score"], errors="coerce")
@@ -170,6 +193,7 @@ if uploaded:
         ))
         fig.update_layout(height=350, yaxis_title="Балл", xaxis_title="")
         st.plotly_chart(fig, use_container_width=True)
+        st.caption("Столбцы — итоговые баллы камер. Чем выше столбец, тем лучше результат.")
 
         st.subheader("Профиль по показателям")
         keys = list(CRITERIA.keys())
@@ -200,9 +224,12 @@ if uploaded:
             height=500,
         )
         st.plotly_chart(fig_radar, use_container_width=True)
-        st.caption(
-            "1.0 — лучший результат по показателю внутри выборки, "
-            "0.0 — худший. Оси нормированы по min–max."
+
+        st.markdown("**Как читать радар:**")
+        st.markdown(
+            "- По кругу расположены показатели качества.\n"
+            "- **1.0** — лучший результат по показателю внутри выборки, **0.0** — худший.\n"
+            "- Оси нормированы по min–max, поэтому форма профиля показывает сильные и слабые стороны каждой камеры."
         )
 
         if len(rated) >= 2:
@@ -228,8 +255,15 @@ if uploaded:
 
             df_diffs = df_diffs.rename(columns=DIFF_LABELS)
             st.dataframe(df_diffs, use_container_width=True, hide_index=True)
-            st.caption("Δ > 0 — первая камера лучше по показателю.")
+
+            st.markdown("**Как читать таблицу:**")
+            st.markdown(
+                "- Каждая строка — сравнение двух камер (A и B).\n"
+                "- **Δ** — разница значений: положительное значение означает, что **камера A лучше** по этому показателю.\n"
+                "- Отрицательное Δ — лучше камера B."
+            )
 
         st.subheader("Экспорт")
         csv = df[show_cols].to_csv(index=False).encode("utf-8")
         st.download_button("Скачать CSV", csv, "camera_rank.csv", "text/csv")
+        st.caption("CSV содержит все показатели по каждой камере в исходных единицах.")
