@@ -28,9 +28,22 @@ with st.sidebar:
              "Если включено — балл не зависит от того, кто ещё загружен.",
     )
     st.caption("Веса показателей")
+
+    WEIGHT_LABELS = {
+        "sharpness":     "Резкость",
+        "noise":         "Яркостный шум",
+        "dynamic_range": "Динамический диапазон",
+        "exposure":      "Экспозиция",
+        "contrast":      "Контраст",
+        "colorfulness":  "Насыщенность",
+        "chroma_noise":  "Цветовой шум",
+        "highlight_rec": "Сохранность светов",
+        "shadow_detail": "Сохранность теней",
+    }
+
     weights = {}
     for k, v in DEFAULT_WEIGHTS.items():
-        weights[k] = st.slider(k, 0.0, 0.5, v, 0.01)
+        weights[k] = st.slider(WEIGHT_LABELS.get(k, k), 0.0, 0.5, v, 0.01)
 
 with st.expander("Как пользоваться", expanded=False):
     st.markdown("""
